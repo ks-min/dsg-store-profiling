@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script type=text/javascript>
+    $SCRIPT_ROOT = {{request.script_root | tojson | safe}};
+    </script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSG | Store Profiling</title>
+    <link rel="stylesheet" href="static/css/bootstrap.min.yeti.css" id="bt-theme">
+    <link rel="stylesheet" href="static/css/bootstrap-select.min.css">
+    <link rel="stylesheet" href="static/css/awesome-bootstrap-checkbox.css">
+    <link rel="stylesheet" href="static/css/bootstrap-slider.min.css">
+    <link rel="stylesheet" href="static/css/selectize.bootstrap3.css">
+    <link rel="stylesheet" href="static/css/query-builder.default.css" id="qb-theme">
+    <link rel="stylesheet" href="http://mistic100.github.io/jQuery-QueryBuilder/assets/flags/flags.css">
+    <style>
+    .flag {
+        display: inline-block;
+    }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12 col-lg-10 col-lg-offset-1">
+                <div class="page-header">
+                    <h3>Store Profiling App | <small>DSG/GXY/FAS</small></h3>
+                </div>
+                <div id="builder"></div>
+                <div class="btn-group pull-left">
+                    <input type="button" class="btn btn-warning reset" value="Reset" />
+                    <input type="button" class="btn btn-success parse-sql" value="Run" />
+                </div>
+                <div class="form-group pull-right">
+                    <textarea class="form-control" rows="1" id="sku">Enter SKU</textarea>
+                </div>
+                <div>
+                    <input type="button" class="btn btn-success" value="Submit" id="subm" />
+                </div>
+                <div id="result" class="hide">
+                    <h3>Output</h3>
+                    <pre></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="static/js/jquery.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+    <script src="static/js/bootstrap-select.min.js"></script>
+    <script src="static/js/bootbox.js"></script>
+    <script src="static/js/bootstrap-slider.min.js"></script>
+    <script src="static/js/selectize.min.js"></script>
+    <script src="static/js/jQuery.extendext.min.js"></script>
+    <script src="static/js/sql-parser.js"></script>
+    <script src="static/js/doT.js"></script>
+    <script src="static/js/interact.js"></script>
+    <script src="static/js/query-builder.js"></script>
+    <script>
+
+    // $(function() {
+    //     $('#subm').bind('click', function() {
+    //         $.get('/show_results', function(data) {
+    //             return;
+    //         });
+    //         return false;
+    //     });
+    // });
+
+
+        $('#subm').click(function() {
+            document.location.href='/show_results';
+        });
+
+
+
+    $('[data-toggle="tooltip"]').tooltip();
+    var $b = $('#builder');
+    var options = {
+        allow_empty: true,
+        sort_filters: false,
+        // optgroups: {
+        //   core: {
+        //     en: 'Core',
+        //     fr: 'Coeur'
+        //   }
+        // },
+        plugins: {
+            'bt-tooltip-errors': {
+                delay: 100
+            },
+            'sortable': null,
+            'filter-description': {
+                mode: 'bootbox'
+            },
+            'bt-selectpicker': null,
+            'unique-filter': null,
+            'bt-checkbox': {
+                color: 'primary'
+            },
+            'invert': null,
+            'not-group': null
+        },
+        // standard operators in custom optgroups
+        operators: [{
+            type: 'equal',
+            optgroup: 'basic'
+        }, {
+            type: 'not_equal',
+            optgroup: 'basic'
+        }, {
+            type: 'in',
+            optgroup: 'basic'
+        }, {
+            type: 'not_in',
+            optgroup: 'basic'
+        }, {
+            type: 'less',
+            optgroup: 'numbers'
+        }, {
+            type: 'less_or_equal',
+            optgroup: 'numbers'
+        }, {
+            type: 'greater',
+            optgroup: 'numbers'
+        }, {
+            type: 'greater_or_equal',
+            optgroup: 'numbers'
+        }, {
+            type: 'between',
+            optgroup: 'numbers'
+        }, {
+            type: 'not_between',
+            optgroup: 'numbers'
+        }, {
+            type: 'begins_with',
+            optgroup: 'strings'
+        }, {
+            type: 'not_begins_with',
+            optgroup: 'strings'
+        }, {
+            type: 'contains',
+            optgroup: 'strings'
+        }, {
+            type: 'not_contains',
+            optgroup: 'strings'
+        }, {
+            type: 'ends_with',
+            optgroup: 'strings'
+        }, {
+            type: 'not_ends_with',
+            optgroup: 'strings'
+        }, {
+            type: 'is_empty',
+            optgroup: 'misc'
+        }, {
+            type: 'is_not_empty',
+            optgroup: 'misc'
+        }, {
+            type: 'is_null',
+            optgroup: 'misc'
+        }, {
+            type: 'is_not_null',
+            optgroup: 'misc'
+        }],
+        filters: [
+            /*
+             * basic
+             */
+            {
+                id: 'StoreType',
+                label: 'Store Type',
+                value_separator: ',',
+                type: 'string',
+                input: 'select',
+                // optgroup: 'core',
+                values: {
+                    'leg': 'LEG',
+                    'legrem': 'LEG/REMODEL',
+                    'refresh': 'REFRESH',
+                    'leg14rem': 'LEG/ 2014 SL REMODEL'
+                },
+                unique: true
+            },
+            // /*
+            //  * checkbox
+            //  */
+            // {
+            //   id: 'category',
+            //   label: 'Category',
+            //   type: 'integer',
+            //   input: 'checkbox',
+            //   optgroup: 'core',
+            //   values: {
+            //     1: 'Books',
+            //     2: 'Movies',
+            //     3: 'Music',
+            //     4: 'Tools',
+            //     5: 'Goodies',
+            //     6: 'Clothes'
+            //   },
+            //   colors: {
+            //     1: 'foo',
+            //     2: 'warning',
+            //     5: 'success'
+            //   },
+            //   operators: ['in', 'not_in', 'equal', 'not_equal', 'is_null', 'is_not_null']
+            // },
+            /*
+             * select
+             */
+            // {
+            //   id: 'continent',
+            //   label: 'Continent',
+            //   type: 'string',
+            //   input: 'select',
+            //   optgroup: 'core',
+            //   placeholder: 'Select something',
+            //   values: {
+            //     'eur': 'Europe',
+            //     'asia': 'Asia',
+            //     'oce': 'Oceania',
+            //     'afr': 'Africa',
+            //     'na': 'North America',
+            //     'sa': 'South America'
+            //   },
+            //   operators: ['equal', 'not_equal', 'is_null', 'is_not_null']
+            // },
+            /*
+             * Selectize
+             */
+            {
+                id: 'State',
+                label: 'State',
+                type: 'string',
+                input: 'select',
+                multiple: true,
+                plugin: 'selectize',
+                plugin_config: {
+                    valueField: 'id',
+                    labelField: 'name',
+                    searchField: 'name',
+                    sortField: 'name',
+                    options: [{
+                        id: "AL",
+                        name: "Alabama"
+                    }, {
+                        id: "AK",
+                        name: "Alaska"
+                    }, {
+                        id: "AZ",
+                        name: "Arizona"
+                    }, {
+                        id: "AR",
+                        name: "Arkansas"
+                    }, {
+                        id: "CA",
+                        name: "California"
+                    }, {
+                        id: "CO",
+                        name: "Colorado"
+                    }, {
+                        id: "CT",
+                        name: "Connecticut"
+                    }, {
+                        id: "DE",
+                        name: "Delaware"
+                    }, {
+                        id: "DC",
+                        name: "District of Columbia"
+                    }, {
+                        id: "FL",
+                        name: "Florida"
+                    }, {
+                        id: "GA",
+                        name: "Georgia"
+                    }, {
+                        id: "HI",
+                        name: "Hawaii"
+                    }, {
+                        id: "ID",
+                        name: "Idaho"
+                    }]
+                },
+                valueSetter: function(rule, value) {
+                    rule.$el.find('.rule-value-container select')[0].selectize.setValue(value);
+                }
+            },
+            /*
+             * integer
+             */
+            {
+                id: 'YearOpen',
+                label: 'Year Opened',
+                type: 'integer',
+                size: 5,
+                validation: {
+                    min: 1900,
+                    step: 1
+                }
+            },
+            /*
+             * radio
+             */
+            {
+                id: 'Gun',
+                label: 'Has Gun Dept',
+                type: 'integer',
+                input: 'radio',
+                values: {
+                    1: 'Yes',
+                    0: 'No'
+                },
+                operators: ['equal']
+            },
+            // /*
+            //  * double
+            //  */
+            // {
+            //   id: 'price',
+            //   label: 'Price',
+            //   type: 'double',
+            //   size: 5,
+            //   validation: {
+            //     min: 0,
+            //     step: 0.01
+            //   },
+            //   data: {
+            //     class: 'com.example.PriceTag'
+            //   }
+            // },
+            /*
+             * int
+             */
+            {
+                id: 'MensApparelTables',
+                label: 'Mens Apparel Tables',
+                type: 'integer',
+                size: 5,
+                validation: {
+                    min: 0,
+                    step: 1
+                }
+            },
+            /*
+             * slider
+             */
+            // {
+            //   id: 'rate',
+            //   label: 'Rate',
+            //   type: 'integer',
+            //   validation: {
+            //     min: 0,
+            //     max: 100
+            //   },
+            //   plugin: 'slider',
+            //   plugin_config: {
+            //     min: 0,
+            //     max: 100,
+            //     value: 0
+            //   },
+            //   onAfterSetValue: function(rule, value) {
+            //     var input = rule.$el.find('.rule-value-container input');
+            //     input.slider('setValue', value);
+            //     input.val(value); // don't know why I need it
+            //   }
+            // },
+            /*
+             * placeholder and regex validation
+             */
+            // {
+            //   id: 'id',
+            //   label: 'Identifier',
+            //   type: 'string',
+            //   optgroup: 'plugin',
+            //   placeholder: '____-____-____',
+            //   size: 14,
+            //   operators: ['equal', 'not_equal'],
+            //   validation: {
+            //     format: /^.{4}-.{4}-.{4}$/,
+            //       messages: {
+            //           format: 'Invalid format, expected: AAAA-AAAA-AAAA'
+            //       }
+            //   }
+            // },
+            /*
+             * custom input
+             */
+            //   {
+            //     id: 'coord',
+            //     label: 'Coordinates',
+            //     type: 'string',
+            //     default_value: 'C.5',
+            //     description: 'The letter is the cadran identifier:\
+            // <ul>\
+            //   <li><b>A</b>: alpha</li>\
+            //   <li><b>B</b>: beta</li>\
+            //   <li><b>C</b>: gamma</li>\
+            // </ul>',
+            //     validation: {
+            //       format: /^[A-C]{1}.[1-6]{1}$/
+            //     },
+            //     input: function(rule, name) {
+            //       var $container = rule.$el.find('.rule-value-container');
+            //       $container.on('change', '[name='+ name +'_1]', function(){
+            //         var h = '';
+            //         switch ($(this).val()) {
+            //           case 'A':
+            //             h = '<option value="-1">-</option> <option value="1">1</option> <option value="2">2</option>';
+            //             break;
+            //           case 'B':
+            //             h = '<option value="-1">-</option> <option value="3">3</option> <option value="4">4</option>';
+            //             break;
+            //           case 'C':
+            //             h = '<option value="-1">-</option> <option value="5">5</option> <option value="6">6</option>';
+            //             break;
+            //         }
+            //         $container.find('[name$=_2]')
+            //           .html(h).toggle(!!h)
+            //           .val('-1').trigger('change');
+            //       });
+            //       return '\
+            //       <select name="'+ name +'_1"> \
+            //         <option value="-1">-</option> \
+            //         <option value="A">A</option> \
+            //         <option value="B">B</option> \
+            //         <option value="C">C</option> \
+            //       </select> \
+            //       <select name="'+ name +'_2" style="display:none;"></select>';
+            //     },
+            //     valueGetter: function(rule) {
+            //       return rule.$el.find('.rule-value-container [name$=_1]').val()
+            //         +'.'+ rule.$el.find('.rule-value-container [name$=_2]').val();
+            //     },
+            //     valueSetter: function(rule, value) {
+            //       if (rule.operator.nb_inputs > 0) {
+            //         var val = value.split('.');
+            //         rule.$el.find('.rule-value-container [name$=_1]').val(val[0]).trigger('change');
+            //         rule.$el.find('.rule-value-container [name$=_2]').val(val[1]).trigger('change');
+            //       }
+            //     }
+            //   }
+        ]
+    };
+    // init
+    $('#builder').queryBuilder(options);
+    $('#builder').on('afterCreateRuleInput.queryBuilder', function(e, rule) {
+        if (rule.filter.plugin == 'selectize') {
+            rule.$el.find('.rule-value-container').css('min-width', '200px')
+                .find('.selectize-control').removeClass('form-control');
+        }
+    });
+    // change language
+    $('[name=language]').selectpicker().on('change', function() {
+        var lang = $(this).val();
+        var done = function() {
+            var rules = $b.queryBuilder('getRules');
+            if (!$.isEmptyObject(rules)) {
+                options.rules = rules;
+            }
+            options.lang_code = lang;
+            $b.queryBuilder('destroy');
+            $('#builder').queryBuilder(options);
+        };
+        if ($.fn.queryBuilder.regional[lang] === undefined) {
+            $.getScript('dist/i18n/query-builder.' + lang + '.js', done);
+        } else {
+            done();
+        }
+    });
+    // change theme
+    $('.change-theme').on('click', function() {
+        $('#qb-theme').replaceWith('<link rel="stylesheet" href="' + $(this).data('qb') + '" id="qb-theme">');
+        $('#bt-theme').replaceWith('<link rel="stylesheet" href="' + $(this).data('bt') + '" id="bt-theme">');
+    });
+    // set rules
+    $('.set').on('click', function() {
+        $('#builder').queryBuilder('setRules', {
+            condition: 'AND',
+            flags: {
+                condition_readonly: true
+            },
+            rules: [{
+                id: 'price',
+                operator: 'between',
+                value: [10, 15],
+                flags: {
+                    no_delete: true,
+                    filter_readonly: true
+                },
+                data: {
+                    unit: '€'
+                }
+            }, {
+                id: 'state',
+                operator: 'equal',
+                value: 'AK'
+            }, {
+                condition: 'OR',
+                not: true,
+                flags: {
+                    no_delete: true,
+                    no_drop: true,
+                    no_sortable: true
+                },
+                rules: [{
+                    id: 'category',
+                    operator: 'equal',
+                    value: 2
+                }, {
+                    id: 'coord',
+                    operator: 'equal',
+                    value: 'B.3'
+                }]
+            }, {
+                id: 'name',
+                operator: 'in',
+                value: ['Mistic', 'Damien']
+            }, {
+                empty: true
+            }]
+        });
+    });
+    // set rules from MongoDB
+    $('.set-mongo').on('click', function() {
+        $('#builder').queryBuilder('setRulesFromMongo', {
+            "$or": [{
+                "name": {
+                    "$regex": "^(?!Mistic)"
+                }
+            }, {
+                "price": {
+                    "$gte": 0,
+                    "$lte": 100
+                }
+            }, {
+                "$nor": [{
+                    "$and": [{
+                        "category": 2
+                    }, {
+                        "category": {
+                            "$in": [4, 5]
+                        }
+                    }]
+                }]
+            }]
+        });
+    });
+    // set rules from SQL
+    $('.set-sql').on('click', function() {
+        $('#builder').queryBuilder('setRulesFromSQL', 'name NOT LIKE "Mistic%" OR price BETWEEN 100 OR 200 OR NOT (category IN(1, 2) AND rate <= 2)');
+    });
+    // reset builder
+    $('.reset').on('click', function() {
+        if (confirm("Are you sure you wish to clear all rules?")) {
+            $('#builder').queryBuilder('reset');
+            $('#result').addClass('hide').find('pre').empty();
+        }
+    });
+    // get rules
+    $('.parse-json').on('click', function() {
+        $('#result').removeClass('hide')
+            .find('pre').html(JSON.stringify(
+                $('#builder').queryBuilder('getRules', {
+                    get_flags: true
+                }),
+                undefined, 2
+            ));
+    });
+    // $('.parse-sql').on('click', function() {
+    //     gen_sql = $('#builder').queryBuilder('getSQL', $(this).data('stmt'), false);
+    //     $('#result').removeClass('hide')
+    //         .find('pre').html(
+    //             gen_sql.sql + (gen_sql.params ? '\n\n' + JSON.stringify(gen_sql.params, undefined, 2) : '')
+    //         );
+    // });
+    
+
+    $(function() {
+        $('.parse-sql').bind('click', function() {
+            gen_sql = $('#builder').queryBuilder('getSQL', $(this).data('stmt'), false);
+            sql_str = gen_sql.sql + (gen_sql.params ? '\n\n' + JSON.stringify(gen_sql.params, undefined, 2) : '');
+            //console.log(sql_str);
+            $.getJSON($SCRIPT_ROOT + '/receive_sku', {
+                sku_val: $('textarea').val()
+            }, function(data) {
+                //alert('SKU Processed: ' + data.res);
+            });
+            $.getJSON($SCRIPT_ROOT + '/receive_sql', {
+                sql_val: sql_str
+            }, function(data) {
+                //alert('SQL Generated: ' + data.res);
+            });
+            return false;
+        });
+    });
+
+
+    $('.parse-mongo').on('click', function() {
+        $('#result').removeClass('hide')
+            .find('pre').html(JSON.stringify(
+                $('#builder').queryBuilder('getMongo'),
+                undefined, 2
+            ));
+    });
+    // set filters
+    $('.set-filters').on('click', function() {
+        $(this).prop('disabled', true);
+        $(this).tooltip('hide');
+        // add a new filter after 'state'
+        $('#builder').queryBuilder('addFilter', {
+                id: 'new_one',
+                label: 'New filter',
+                type: 'string'
+            },
+            'state'
+        );
+        // // remove filter 'coord'
+        // $('#builder').queryBuilder('removeFilter',
+        //   ['coord', 'state', 'bson'],
+        //   true
+        // );
+        // also available : 'setFilters'
+    });
+
+
+    </script>
+    <script>
+    document.write('<script src="//' + location.host.split(':')[0] + ':35729/livereload.js" async defer><' + '/script>');
+    </script>
+</body>
+
+</html>
